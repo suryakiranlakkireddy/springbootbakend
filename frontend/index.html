@@ -1,1 +1,310 @@
-<!-- see repo for full content -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Student Record System</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background: #f0f4f8;
+        color: #333;
+      }
+
+      header {
+        background: #2c3e50;
+        color: white;
+        padding: 16px 24px;
+        font-size: 22px;
+        font-weight: bold;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 30px auto;
+        padding: 0 16px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .card h2 {
+        margin-bottom: 16px;
+        color: #2c3e50;
+        font-size: 18px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #2c3e50;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .btn-primary {
+        background: #2c3e50;
+        color: white;
+      }
+      .btn-warning {
+        background: #f39c12;
+        color: white;
+      }
+      .btn-danger {
+        background: #e74c3c;
+        color: white;
+      }
+      .btn-secondary {
+        background: #95a5a6;
+        color: white;
+      }
+
+      .btn:hover {
+        opacity: 0.88;
+      }
+
+      .form-actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th {
+        background: #2c3e50;
+        color: white;
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      tr:hover td {
+        background: #f7f9fc;
+      }
+
+      .action-btns {
+        display: flex;
+        gap: 8px;
+      }
+
+      #message {
+        padding: 10px 14px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        display: none;
+        font-size: 14px;
+      }
+
+      .msg-success {
+        background: #d4edda;
+        color: #155724;
+        display: block !important;
+      }
+      .msg-error {
+        background: #f8d7da;
+        color: #721c24;
+        display: block !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>Student Record System</header>
+
+    <div class="container">
+      <div id="message"></div>
+
+      <div class="card">
+        <h2 id="form-title">Add New Student</h2>
+        <div class="form-grid">
+          <input type="hidden" id="studentId" />
+          <input type="text" id="name" placeholder="Full Name" />
+          <input type="email" id="email" placeholder="Email" />
+          <input type="text" id="course" placeholder="Course" />
+          <input type="number" id="age" placeholder="Age" />
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="saveStudent()">Save</button>
+          <button class="btn btn-secondary" onclick="resetForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>All Students</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Course</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentTable">
+            <tr>
+              <td colspan="6" style="text-align: center; color: #999">
+                Loading...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const API = "http://localhost:8081/api/students";
+
+      function showMessage(msg, type) {
+        const el = document.getElementById("message");
+        el.textContent = msg;
+        el.className = type === "success" ? "msg-success" : "msg-error";
+        setTimeout(() => {
+          el.className = "";
+          el.textContent = "";
+        }, 3000);
+      }
+
+      async function loadStudents() {
+        try {
+          const res = await fetch(API);
+          const students = await res.json();
+          const tbody = document.getElementById("studentTable");
+
+          if (students.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;">No students found.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = students
+            .map(
+              (s) => `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.name}</td>
+          <td>${s.email}</td>
+          <td>${s.course}</td>
+          <td>${s.age}</td>
+          <td class="action-btns">
+            <button class="btn btn-warning" onclick="editStudent(${s.id}, '${s.name}', '${s.email}', '${s.course}', ${s.age})">Edit</button>
+            <button class="btn btn-danger"  onclick="deleteStudent(${s.id})">Delete</button>
+          </td>
+        </tr>
+      `,
+            )
+            .join("");
+        } catch (e) {
+          showMessage(
+            "Failed to load students. Is the server running?",
+            "error",
+          );
+        }
+      }
+
+      async function saveStudent() {
+        const id = document.getElementById("studentId").value;
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const course = document.getElementById("course").value.trim();
+        const age = parseInt(document.getElementById("age").value);
+
+        if (!name || !email || !course || !age) {
+          showMessage("Please fill in all fields.", "error");
+          return;
+        }
+
+        const student = { name, email, course, age };
+        const isUpdate = id !== "";
+
+        try {
+          const res = await fetch(isUpdate ? `${API}/${id}` : API, {
+            method: isUpdate ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(student),
+          });
+
+          if (!res.ok) throw new Error();
+          showMessage(
+            isUpdate ? "Student updated!" : "Student added!",
+            "success",
+          );
+          resetForm();
+          loadStudents();
+        } catch (e) {
+          showMessage("Failed to save student.", "error");
+        }
+      }
+
+      function editStudent(id, name, email, course, age) {
+        document.getElementById("studentId").value = id;
+        document.getElementById("name").value = name;
+        document.getElementById("email").value = email;
+        document.getElementById("course").value = course;
+        document.getElementById("age").value = age;
+        document.getElementById("form-title").textContent = "Edit Student";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      async function deleteStudent(id) {
+        if (!confirm("Are you sure you want to delete this student?")) return;
+        try {
+          await fetch(`${API}/${id}`, { method: "DELETE" });
+          showMessage("Student deleted.", "success");
+          loadStudents();
+        } catch (e) {
+          showMessage("Failed to delete student.", "error");
+        }
+      }
+
+      function resetForm() {
+        document.getElementById("studentId").value = "";
+        document.getElementById("name").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("course").value = "";
+        document.getElementById("age").value = "";
+        document.getElementById("form-title").textContent = "Add New Student";
+      }
+
+      loadStudents();
+    </script>
+  </body>
+</html>
